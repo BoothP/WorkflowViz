@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import ReactFlow, {
   ReactFlowProvider,
   Node as RFNode,
@@ -8,16 +8,7 @@ import ReactFlow, {
   useEdgesState,
   addEdge,
   Connection,
-  OnNodesChange,
-  OnEdgesChange,
   OnConnect,
-  NodeMouseEvent,
-  Controls,
-  Background,
-  NodeChange,
-  EdgeChange,
-  applyNodeChanges,
-  applyEdgeChanges,
 } from "reactflow";
 import "reactflow/dist/style.css";
 
@@ -36,68 +27,52 @@ interface CustomNodeData {
   config: Record<string, any>;
 }
 
-type AppNode = RFNode<CustomNodeData>;
-type AppEdge = RFEdge;
+export type AppNode = RFNode<CustomNodeData>;
+export type AppEdge = RFEdge;
 
 interface WorkflowCanvasProps {
   initialNodes: AppNode[];
   initialEdges: AppEdge[];
-  onNodesChange: (nodes: AppNode[]) => void;
-  onEdgesChange: (edges: AppEdge[]) => void;
-  onConnect?: OnConnect;
 }
 
 const fitViewOptions: FitViewOptions = {
   padding: 0.2,
 };
 
-const WorkflowCanvas = ({
+const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
   initialNodes,
   initialEdges,
-  onNodesChange,
-  onEdgesChange,
-  onConnect,
-}: WorkflowCanvasProps) => {
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+}) => {
+  const [nodes, setNodes, onNodesChangeHandler] = useNodesState(initialNodes);
+  const [edges, setEdges, onEdgesChangeHandler] = useEdgesState(initialEdges);
 
   const [selectedNode, setSelectedNode] = useState<AppNode | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  const handleConnect = useCallback(
-    (connection: Connection) => {
-      if (onConnect) {
-        onConnect(connection);
-      }
-    },
-    [onConnect]
+  const onConnect: OnConnect = useCallback(
+    (params: Connection) => setEdges((eds) => addEdge(params, eds)),
+    [setEdges]
   );
 
   const handleNodeClick = useCallback(
-    (event: NodeMouseEvent, node: AppNode) => {
+    (_event: React.MouseEvent, node: AppNode) => {
       setSelectedNode(node);
       setIsDrawerOpen(true);
     },
-    []
+    [setSelectedNode, setIsDrawerOpen]
   );
 
   const handleDrawerClose = () => {
     setIsDrawerOpen(false);
   };
 
-  const handleNodesChange = useCallback(
-    (changes: NodeChange[]) => {
-      onNodesChange(applyNodeChanges(changes, initialNodes));
-    },
-    [initialNodes, onNodesChange]
-  );
+  useEffect(() => {
+    setNodes(initialNodes);
+  }, [initialNodes, setNodes]);
 
-  const handleEdgesChange = useCallback(
-    (changes: EdgeChange[]) => {
-      onEdgesChange(applyEdgeChanges(changes, initialEdges));
-    },
-    [initialEdges, onEdgesChange]
-  );
+  useEffect(() => {
+    setEdges(initialEdges);
+  }, [initialEdges, setEdges]);
 
   return (
     <div className="w-full h-full relative">
@@ -106,9 +81,9 @@ const WorkflowCanvas = ({
           <ReactFlow
             nodes={nodes}
             edges={edges}
-            onNodesChange={handleNodesChange}
-            onEdgesChange={handleEdgesChange}
-            onConnect={handleConnect}
+            onNodesChange={onNodesChangeHandler}
+            onEdgesChange={onEdgesChangeHandler}
+            onConnect={onConnect}
             onNodeClick={handleNodeClick}
             fitView
             fitViewOptions={fitViewOptions}
@@ -117,8 +92,8 @@ const WorkflowCanvas = ({
             elementsSelectable={true}
             className="min-h-full bg-white rounded-lg"
           >
-            <Background />
-            <Controls />
+            {/* <Background /> */}
+            {/* <Controls /> */}
           </ReactFlow>
         </ReactFlowProvider>
       </div>

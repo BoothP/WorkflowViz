@@ -2,7 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
-import workflowRoutes from './routes/workflows';
+import workflowRoutes from './routes/workflows.js';
+import authRoutes from './routes/auth.js';
+import { User } from './models/User.js';
 
 // Load environment variables
 dotenv.config({
@@ -28,14 +30,20 @@ app.use(
       }
     },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
   })
 );
+
+// Handle preflight requests
+app.options('*', cors()); // This will use the options from the above app.use(cors({...}))
 
 // Middleware
 app.use(express.json());
 
 // Routes
 app.use('/api/workflows', workflowRoutes);
+app.use('/api/auth', authRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -45,8 +53,16 @@ app.get('/health', (req, res) => {
 // Connect to MongoDB
 mongoose
   .connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/workflowviz')
-  .then(() => {
+  .then(async () => {
     console.log('Connected to MongoDB');
+    
+    // Ensure admin user exists
+    try {
+      await User.ensureAdminExists();
+    } catch (error) {
+      console.error('Error creating admin user:', error);
+    }
+    
     // Start server
     app.listen(port, () => {
       console.log(`Server running on port ${port}`);

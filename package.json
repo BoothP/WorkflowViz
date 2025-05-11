@@ -1,0 +1,82 @@
+{
+  "name": "workflowviz",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "version": "standard-version",
+    "release": "standard-version --release-as",
+    "release:alpha": "standard-version --prerelease alpha",
+    "release:beta": "standard-version --prerelease beta",
+    "release:rc": "standard-version --prerelease rc"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.3",
+    "standard-version": "^9.5.0",
+    "tailwindcss": "^4.1.6"
+  },
+  "standard-version": {
+    "header": "# Changelog\n\nAll notable changes to this project will be documented in this file. See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.",
+    "types": [
+      {
+        "type": "feat",
+        "section": "✨ Features",
+        "hidden": false
+      },
+      {
+        "type": "fix",
+        "section": "🐛 Bug Fixes",
+        "hidden": false
+      },
+      {
+        "type": "docs",
+        "section": "📚 Documentation",
+        "hidden": false
+      },
+      {
+        "type": "style",
+        "section": "💅 Styles",
+        "hidden": false
+      },
+      {
+        "type": "refactor",
+        "section": "♻️ Code Refactoring",
+        "hidden": false
+      },
+      {
+        "type": "perf",
+        "section": "⚡ Performance Improvements",
+        "hidden": false
+      },
+      {
+        "type": "test",
+        "section": "✅ Tests",
+        "hidden": false
+      },
+      {
+        "type": "build",
+        "section": "👷‍ Build System",
+        "hidden": false
+      },
+      {
+        "type": "ci",
+        "section": "🔧 Continuous Integration",
+        "hidden": false
+      },
+      {
+        "type": "chore",
+        "section": "📦 Chores",
+        "hidden": false
+      },
+      {
+        "type": "revert",
+        "section": "⏪ Reverts",
+        "hidden": false
+      }
+    ]
+  }
+}

@@ -6,8 +6,8 @@ import {
   getWorkflowById,
   updateWorkflow,
   deleteWorkflow,
-} from '../controllers/workflows';
-import { authenticateJWT } from '../middleware/jwt';
+} from '../controllers/workflows.js';
+import { authenticateJWT } from '../middleware/jwt.js';
 
 const router = express.Router();
 

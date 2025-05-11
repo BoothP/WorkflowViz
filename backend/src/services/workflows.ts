@@ -1,6 +1,6 @@
 // backend/src/services/workflows.ts
 import fetch from 'node-fetch';
-import { ParseWorkflowResponse } from '../interfaces/workflow';
+import { ParseWorkflowResponse } from '../interfaces/workflow.js';
 import { z } from 'zod';
 
 // Zod Schemas for validation

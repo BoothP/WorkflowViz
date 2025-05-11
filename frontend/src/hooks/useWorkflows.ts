@@ -4,27 +4,28 @@ import {
   useQueryClient,
   QueryKey,
 } from "@tanstack/react-query";
-import { useState } from "react";
-import { Node, Edge } from "reactflow";
+import type { Node as RFNode, Edge as RFEdge } from "reactflow";
 
 // --- Types (Mirroring backend/interfaces, adapt as needed for frontend) ---
-// Ideally, these would be shared or generated types
+// Use different names for your local types if they are different from React Flow's internal types
+// Or ensure your local types are compatible and use the RFNode/RFEdge directly if possible.
 
-export type NodeType = "trigger" | "action" | "filter" | "llmAgent";
+export type LocalNodeType = "trigger" | "action" | "filter" | "llmAgent";
 
-export interface Node {
+// If your Node structure is different from React Flow's, define it here
+export interface LocalNode {
   id: string;
-  type: NodeType;
+  type: LocalNodeType; // Using your local type
   label: string;
   config: Record<string, any>;
-  // Frontend might add position, width, height from React Flow
   position?: { x: number; y: number };
   width?: number | null;
   height?: number | null;
 }
 
-export interface Edge {
-  id: string; // React Flow uses id for edges too
+// If your Edge structure is different, define it here
+export interface LocalEdge {
+  id: string;
   source: string;
   target: string;
   label?: string;
@@ -33,8 +34,8 @@ export interface Edge {
 export interface Workflow {
   _id: string;
   name: string;
-  nodes: Node[];
-  edges: Edge[];
+  nodes: RFNode[]; // Using React Flow's Node type for what's stored/fetched
+  edges: RFEdge[]; // Using React Flow's Edge type
   ownerId: string;
   createdAt: string;
   updatedAt: string;
@@ -43,14 +44,14 @@ export interface Workflow {
 // Input types for mutations
 export interface CreateWorkflowData {
   name: string;
-  nodes: Node[];
-  edges: Edge[];
+  nodes: RFNode[]; // Expecting React Flow compatible nodes
+  edges: RFEdge[]; // Expecting React Flow compatible edges
 }
 
 export interface UpdateWorkflowData {
   name?: string;
-  nodes?: Node[];
-  edges?: Edge[];
+  nodes?: RFNode[];
+  edges?: RFEdge[];
 }
 
 // --- Placeholder for Auth Token ---
@@ -71,6 +72,7 @@ const apiCall = async <T>(
   const token = getAuthToken();
   const headers = new Headers(options.headers || {});
   headers.append("Content-Type", "application/json");
+  headers.append("Accept", "application/json");
   if (token) {
     headers.append("Authorization", `Bearer ${token}`);
   }
@@ -78,13 +80,19 @@ const apiCall = async <T>(
   const response = await fetch(url, {
     ...options,
     headers,
+    credentials: "include", // Important for cookies
   });
 
   if (!response.ok) {
-    const errorData = await response
-      .json()
-      .catch(() => ({ message: "Failed to parse error response" }));
-    throw new Error(errorData.message || `HTTP error ${response.status}`);
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || `HTTP error ${response.status}`);
+    } else {
+      const text = await response.text();
+      console.error("Non-JSON response:", text);
+      throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+    }
   }
 
   // Handle potential empty body for status codes like 200 on DELETE or 204
@@ -116,91 +124,55 @@ export const useWorkflows = () => {
  * Fetches a single workflow by its ID.
  * @param id The ID of the workflow to fetch.
  */
-export const useWorkflow = (id: string) => {
-  const [workflow, setWorkflow] = useState<Workflow | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-
-  const fetchWorkflow = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/${id}`);
-      if (!response.ok) throw new Error("Failed to fetch workflow");
-      const data = await response.json();
-      setWorkflow(data);
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error("Unknown error"));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return { workflow, loading, error, fetchWorkflow };
+export const useWorkflow = (id: string | undefined | null) => {
+  const queryKey: QueryKey = ["workflow", id];
+  return useQuery<Workflow, Error>({
+    queryKey,
+    queryFn: () => apiCall<Workflow>(`${API_BASE_URL}/${id}`),
+    enabled: !!id && !!getAuthToken(),
+  });
 };
 
 /**
  * Provides a mutation function to create a new workflow.
  */
 export const useCreateWorkflow = () => {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
-
-  const createWorkflow = async (
-    workflow: Omit<Workflow, "_id" | "ownerId" | "createdAt" | "updatedAt">
-  ) => {
-    try {
-      setLoading(true);
-      const response = await fetch(API_BASE_URL, {
+  const queryClient = useQueryClient();
+  return useMutation<Workflow, Error, CreateWorkflowData>({
+    mutationFn: (newWorkflowData) =>
+      apiCall<Workflow>(API_BASE_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(workflow),
-      });
-      if (!response.ok) throw new Error("Failed to create workflow");
-      const data = await response.json();
-      return data;
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error("Unknown error"));
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return { createWorkflow, loading, error };
+        body: JSON.stringify(newWorkflowData),
+      }),
+    onSuccess: (returnedWorkflow) => {
+      queryClient.invalidateQueries({ queryKey: ["workflows"] });
+      queryClient.setQueryData(
+        ["workflow", returnedWorkflow._id],
+        returnedWorkflow
+      );
+    },
+  });
 };
 
 /**
  * Provides a mutation function to update an existing workflow.
  */
 export const useUpdateWorkflow = () => {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
-
-  const updateWorkflow = async (
-    id: string,
-    workflow: Partial<
-      Omit<Workflow, "_id" | "ownerId" | "createdAt" | "updatedAt">
-    >
-  ) => {
-    try {
-      setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(workflow),
-      });
-      if (!response.ok) throw new Error("Failed to update workflow");
-      const data = await response.json();
-      return data;
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error("Unknown error"));
-      throw err;
-    } finally {
-      setLoading(false);
+  const queryClient = useQueryClient();
+  return useMutation<Workflow, Error, { id: string; data: UpdateWorkflowData }>(
+    {
+      mutationFn: ({ id, data }) =>
+        apiCall<Workflow>(`${API_BASE_URL}/${id}`, {
+          method: "PUT",
+          body: JSON.stringify(data),
+        }),
+      onSuccess: (returnedWorkflow, variables) => {
+        queryClient.invalidateQueries({ queryKey: ["workflows"] });
+        queryClient.invalidateQueries({ queryKey: ["workflow", variables.id] });
+        queryClient.setQueryData(["workflow", variables.id], returnedWorkflow);
+      },
     }
-  };
-
-  return { updateWorkflow, loading, error };
+  );
 };
 
 /**
@@ -209,16 +181,13 @@ export const useUpdateWorkflow = () => {
 export const useDeleteWorkflow = () => {
   const queryClient = useQueryClient();
   return useMutation<void, Error, string>({
-    mutationFn: (id) =>
-      apiCall<void>(`${API_BASE_URL}/${id}`, {
+    mutationFn: (workflowId) =>
+      apiCall<void>(`${API_BASE_URL}/${workflowId}`, {
         method: "DELETE",
       }),
-    onSuccess: (data, id) => {
-      // data is void here
-      // Invalidate the list query
+    onSuccess: (_data, workflowId) => {
       queryClient.invalidateQueries({ queryKey: ["workflows"] });
-      // Remove the specific workflow from the cache
-      queryClient.removeQueries({ queryKey: ["workflow", id] });
+      queryClient.removeQueries({ queryKey: ["workflow", workflowId] });
     },
   });
 };

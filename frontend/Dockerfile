@@ -1,28 +1,34 @@
 # Build stage
-FROM node:20-alpine as builder
+FROM node:20-alpine AS builder
 
-WORKDIR /app
+WORKDIR /monorepo
 
-# Copy package files
-COPY package*.json ./
+# Context is now project root. These files are at the root.
+COPY package.json package-lock.json ./
 
-# Install dependencies
-RUN npm ci
+# Copy the frontend's package.json into its place within the monorepo structure
+# Path is relative to the project root context.
+COPY frontend/package.json ./frontend/package.json
 
-# Copy source code
-COPY . .
+# Install dependencies for ONLY the frontend workspace using the root lockfile
+RUN npm ci --workspace=frontend
 
-# Build the app
+# Copy the rest of the frontend's source code into its place
+# Path is relative to the project root context.
+COPY frontend/ ./frontend/
+
+# Now, set the working directory to the frontend workspace to run its build script
+WORKDIR /monorepo/frontend
 RUN npm run build
 
 # Production stage
 FROM nginx:alpine
 
-# Copy built assets from builder stage
-COPY --from=builder /app/dist /usr/share/nginx/html
+# Copy built assets from the frontend workspace's dist directory in the builder stage
+COPY --from=builder /monorepo/frontend/dist /usr/share/nginx/html
 
-# Copy nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copy nginx configuration. Path is relative to project root context.
+COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Expose port
 EXPOSE 3000

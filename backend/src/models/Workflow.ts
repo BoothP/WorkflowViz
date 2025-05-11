@@ -1,6 +1,6 @@
 import mongoose, { Document, Schema, Model } from 'mongoose';
-import { IUser } from './User'; // Assuming IUser is exported from User model
-import { Node, Edge } from '../interfaces/workflow'; // Re-using existing interfaces
+import { IUser } from './User.js'; // Assuming IUser is exported from User model
+import { Node, Edge } from '../interfaces/workflow.js'; // Re-using existing interfaces
 
 // Interface for the Workflow document
 export interface IWorkflow extends Document {

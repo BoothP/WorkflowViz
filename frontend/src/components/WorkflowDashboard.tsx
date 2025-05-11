@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { useWorkflows } from "@/hooks/useWorkflows"; // Assuming hooks are in this path
-import { Workflow } from "@/hooks/useWorkflows"; // Import the Workflow type
+import { useWorkflows, Workflow } from "@/hooks/useWorkflows"; // Import Workflow type
 
 // Import shadcn/ui components (assuming they are added to the project)
 import {
@@ -38,7 +37,7 @@ const WorkflowDashboard: React.FC = () => {
   const filteredWorkflows = useMemo(() => {
     if (!workflows) return [];
     if (!searchTerm) return workflows;
-    return workflows.filter((workflow) =>
+    return workflows.filter((workflow: Workflow) =>
       workflow.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [workflows, searchTerm]);

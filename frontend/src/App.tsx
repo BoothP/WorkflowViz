@@ -7,6 +7,7 @@ import {
 } from "react-router-dom";
 import EditorPage from "@/pages/editor";
 import LoginPage from "@/pages/login";
+import SignupPage from "@/pages/signup";
 import { Button } from "@/components/ui/button";
 import { useWorkflows, Workflow } from "@/hooks/useWorkflows";
 import { formatDistanceToNow } from "date-fns";
@@ -94,6 +95,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/signup" element={<SignupPage />} />
       <Route
         path="/"
         element={

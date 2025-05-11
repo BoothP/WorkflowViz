@@ -1,8 +1,8 @@
 import { Response } from 'express';
-import { parseWorkflow as parseWorkflowService } from '../services/workflows';
-import { ParseWorkflowRequest, Node, Edge } from '../interfaces/workflow';
-import { Workflow, IWorkflow } from '../models/Workflow';
-import { AuthenticatedRequest } from '../middleware/jwt';
+import { parseWorkflow as parseWorkflowService } from '../services/workflows.js';
+import { ParseWorkflowRequest, Node, Edge } from '../interfaces/workflow.js';
+import { Workflow, IWorkflow } from '../models/Workflow.js';
+import { AuthenticatedRequest } from '../middleware/jwt.js';
 import mongoose from 'mongoose';
 
 export const parseWorkflowHandler = async (req: AuthenticatedRequest, res: Response) => {

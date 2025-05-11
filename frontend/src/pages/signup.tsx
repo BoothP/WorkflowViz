@@ -1,42 +1,38 @@
-import { useState, FormEvent, useEffect } from "react";
-import { useLocation, Link } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
+import { useState, FormEvent } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-interface LocationState {
-  message?: string;
-}
-
-export default function LoginPage() {
+export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
-  const location = useLocation();
-
-  // Check for success message in location state (e.g., after successful signup)
-  useEffect(() => {
-    const state = location.state as LocationState;
-    if (state?.message) {
-      setSuccessMessage(state.message);
-      // Clear the location state after displaying the message
-      window.history.replaceState({}, document.title);
-    }
-  }, [location.state]);
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
-    setSuccessMessage(null);
+
+    // Validate passwords match
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    // Validate password strength
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters long");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
       const API_URL = import.meta.env.VITE_API_BASE_URL ?? "";
       const base = API_URL.length > 0 ? API_URL.replace(/\/$/, "") : "";
-      const response = await fetch(`${base}/api/auth/login`, {
+      const response = await fetch(`${base}/api/auth/signup`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -51,7 +47,7 @@ export default function LoginPage() {
         const contentType = response.headers.get("content-type");
         if (contentType && contentType.includes("application/json")) {
           const errorData = await response.json();
-          throw new Error(errorData.message || "Invalid credentials");
+          throw new Error(errorData.message || "Failed to create account");
         } else {
           // Handle non-JSON responses (likely HTML error pages)
           const text = await response.text();
@@ -62,16 +58,18 @@ export default function LoginPage() {
         }
       }
 
-      const data = await response.json();
+      // Parse response, but we don't need the data for anything
+      await response.json();
 
-      if (data.success && data.data?.accessToken) {
-        login(data.data.accessToken);
-      } else {
-        throw new Error("Invalid response format");
-      }
+      // Redirect to login page with success message
+      navigate("/login", {
+        state: {
+          message: "Account created successfully! Please sign in.",
+        },
+      });
     } catch (err) {
-      console.error("Login error:", err);
-      setError(err instanceof Error ? err.message : "Failed to login");
+      console.error("Signup error:", err);
+      setError(err instanceof Error ? err.message : "Failed to create account");
     } finally {
       setIsLoading(false);
     }
@@ -82,7 +80,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md space-y-8 p-8">
         <div className="text-center">
           <h1 className="text-4xl font-bold tracking-tight">WorkflowViz</h1>
-          <p className="mt-2 text-muted-foreground">Sign in to your account</p>
+          <p className="mt-2 text-muted-foreground">Create your account</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -106,11 +104,15 @@ export default function LoginPage() {
             />
           </div>
 
-          {successMessage && (
-            <div className="text-sm text-green-600 bg-green-50 p-2 rounded">
-              {successMessage}
-            </div>
-          )}
+          <div className="space-y-2">
+            <Input
+              type="password"
+              placeholder="Confirm Password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+            />
+          </div>
 
           {error && (
             <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
@@ -119,14 +121,14 @@ export default function LoginPage() {
           )}
 
           <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Signing in..." : "Sign in"}
+            {isLoading ? "Creating account..." : "Sign up"}
           </Button>
 
           <div className="text-center text-sm">
             <p>
-              Don't have an account?{" "}
-              <Link to="/signup" className="text-primary hover:underline">
-                Sign up
+              Already have an account?{" "}
+              <Link to="/login" className="text-primary hover:underline">
+                Sign in
               </Link>
             </p>
           </div>

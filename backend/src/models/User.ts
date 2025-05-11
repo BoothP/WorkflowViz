@@ -15,6 +15,7 @@ export interface IUser extends Document {
 // Define the user model interface with static methods
 interface IUserModel extends Model<IUser> {
   findByEmail(email: string): Promise<IUser | null>;
+  ensureAdminExists(): Promise<void>;
 }
 
 // Define the schema
@@ -66,6 +67,21 @@ userSchema.methods.comparePassword = async function (candidatePassword: string):
 // Static method to check if email exists
 userSchema.statics.findByEmail = async function (email: string): Promise<IUser | null> {
   return this.findOne({ email });
+};
+
+// Static method to check if any users exist, and create a default admin if not
+userSchema.statics.ensureAdminExists = async function (): Promise<void> {
+  const userCount = await this.countDocuments();
+
+  if (userCount === 0) {
+    console.log('No users found. Creating default admin user.');
+    await this.create({
+      email: 'admin@example.com',
+      password: 'WorkflowViz2025!', // More secure password
+      oauthProviders: [],
+    });
+    console.log('Default admin user created with email: admin@example.com');
+  }
 };
 
 // Create and export the model
